@@ -63,10 +63,14 @@ The server achieves concurrency using Python's **`threading`** module.
 ## Required Questions
 
 #### 1. What is your strategy for identifying unique clients?
+The strategy for identifying a unique client application is to use the complete socket endpoint tuple: (Client IP Address, Client Port Number).
 
 
 #### 2. How do you prevent clients from opening additional connections once they have reached the maximum number?
+Prevention is enforced using thread-safe checks immediately after the connection is accepted and before allocating further resources
 
 #### 3. Report the times and speedup for concurrent fetch of the URLs in testcases 1 and 2 with the stock HTTP server.
+Wasn't able to successfully test the testcases
 
 #### 4. Report the times and speedup for concurrent fetch of the URLs in testcases 1 and 2 with your http_server_conc. Are these numbers the same as above? Why or why not?
+Wasn't able to successfully test the testcases
