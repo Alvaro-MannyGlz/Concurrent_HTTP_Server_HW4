@@ -11,7 +11,7 @@ MAX_PER_CLIENT = 0
 MAX_TOTAL_CONNECTIONS = 0
 
 # Thread-safe counter for total active connections
-activeConnections = 0
+active_connections = 0
 
 # Dictionary to track connections per client: {('IP', port): count}
 client_connection_counts = {}
@@ -200,7 +200,7 @@ def main():
     server_socket.listen(5)
     print(f"HTTP Server running on http://localhost:{port}/")
 
-    # 4. Infinite Loop: Handle connections concurrently
+    # Infinite Loop: Handle connections concurrently
     try:
         while True:
             client_socket, client_addr = server_socket.accept()
