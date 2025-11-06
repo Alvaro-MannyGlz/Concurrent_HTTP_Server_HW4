@@ -8,19 +8,35 @@ This project will build on a previous project, a sequential Python HTTP server, 
 
 ### Execution
 
-1.  **Launch the Server:** Run the script from your terminal, specifying the port number with the `-p` flag:
+1.  **Launch the Server:** Run the script specifying the port, maximum connections per client, and maximum total connections:
 
     ```bash
-    python http_server.py -p 8080
+    python http_server_conc.py -p <port> -maxclient <numconn> -maxtotal <numconn>
     ```
-    (Replace `8080` with any unused port number.)
+    **Example:**
+    ```bash
+    python http_server_conc.py -p 20001 -maxclient 12 -maxtotal 60
+    ```
 
-2.  **Test with a Browser:** Open your web browser and request a file from the running server:
+### 3. Add Resource Management Strategy 
 
-    ```
-    http://localhost:8080/index.html
-    ```
-    (Ensure you have the requested file, e.g., `index.html`, in the same directory.)
+
+
+## Resource Management and Concurrency
+
+### Client Identification Strategy
+To enforce the per-client connection limit, a client is identified by the unique **(Client IP Address, Client Port Number)** socket tuple. This is necessary because two different applications on the same machine will have the same IP but different ephemeral ports, satisfying the requirement to distinguish clients.
+
+### Concurrency and Limiting
+The server uses thread-safe data structures and Python's `threading.Lock` to enforce limits:
+
+1.  **Global Counter:** A shared, synchronized counter tracks the total number of active connections (`MAX_TOTAL_CONNECTIONS`).
+2.  **Per-Client Dictionary:** A shared, synchronized dictionary tracks the connection count for each unique client ID (`MAX_PER_CLIENT`).
+
+The server checks these limits **immediately upon accepting a connection**. If either limit is exceeded, the server sends a rejection and **closes the socket** before allocating any further resources or spawning a thread.
+
+### Concurrency Model
+The server utilizes multi-threading: the main thread accepts connections, and a dedicated worker thread is spawned to handle the full request and release the resource counts upon completion.
 
 ---
 
@@ -46,9 +62,11 @@ The server achieves concurrency using Python's **`threading`** module.
 
 ## Required Questions
 
-#### 1. What is the difference between this `http_server` and Apache?
+#### 1. What is your strategy for identifying unique clients?
 
-This server is a **simple, basic implementation** designed for educational purposes. It handles only static files, sequential processing of headers/body, and the basic HTTP/1.0 GET method. **Apache** is a robust, production-grade web server that handles complex features such as concurrency management (using processes or threads), dynamic content generation (via modules), advanced security, persistent connections (HTTP/1.1+), and complex configuration/virtual hosting.
 
-#### 2. How can you write `http_server` to allow only certain browsers (e.g., Chrome) to download content?
+#### 2. How do you prevent clients from opening additional connections once they have reached the maximum number?
 
+#### 3. Report the times and speedup for concurrent fetch of the URLs in testcases 1 and 2 with the stock HTTP server.
+
+#### 4. Report the times and speedup for concurrent fetch of the URLs in testcases 1 and 2 with your http_server_conc. Are these numbers the same as above? Why or why not?

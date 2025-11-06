@@ -7,6 +7,18 @@ import socket
 import os
 import threading
 
+MAX_PER_CLIENT = 0
+MAX_TOTAL_CONNECTIONS = 0
+
+# Thread-safe counter for total active connections
+activeConnections = 0
+
+# Dictionary to track connections per client: {('IP', port): count}
+client_connection_counts = {}
+
+# Lock to synchronize access to the global counters
+RESOURCE_LOCK = threading.Lock()
+
 # --- Define Helper Functions ---                                                                                          <- Section 2
 
 # Take raw request data and extracts the essential parts, specifically:
@@ -136,34 +148,93 @@ def handle_client(client_socket):
         # Close Connection
         client_socket.close()
 
+# --- New Helper Function for Thread Cleanup ---
+def handle_client_wrapper(client_socket, client_id):
+    global active_connections, client_connection_counts, RESOURCE_LOCK
+    
+    try:
+        # Call your original client handler
+        handle_client(client_socket)
+        
+    finally:
+        # --- RESOURCE DECREMENT LOGIC (CRITICAL CLEANUP) ---
+        with RESOURCE_LOCK:
+            # Decrement the total counter
+            active_connections -= 1
+            
+            # Decrement the per-client counter
+            client_connection_counts[client_id] -= 1
+            
+            # Optional: Clean up the dictionary entry if the count hits zero
+            if client_connection_counts[client_id] == 0:
+                del client_connection_counts[client_id]
+
+            print(f"Connection closed for {client_id}. Total active: {active_connections}")
 
 # --- Main Server Loop ---                                                                                                <- Section 4
 # Initialize the server and keeps it running indefinitely.
 def main():
-    # Argument Check: Verify the command was run correctly (e.g., `./http_server -p 20001`)
-    if len(sys.argv) != 3 or sys.argv[1] != "-p":
-        print(f"Usage: {sys.argv[0]} -p <port>")
+    global MAX_PER_CLIENT, MAX_TOTAL_CONNECTIONS, RESOURCE_LOCK, active_connections, client_connection_counts
+    
+    # Argument Check: Update to accept 7 arguments
+    if len(sys.argv) != 7 or sys.argv[1] != "-p" or sys.argv[3] != "-maxclient" or sys.argv[5] != "-maxtotal":
+        print(f"Usage: {sys.argv[0]} -p <port> -maxclient <numconn> -maxtotal <numconn>")
         sys.exit(1)
 
-    port = int(sys.argv[2])
+    # Parse and set limits
+    try:
+        port = int(sys.argv[2])
+        # Assign global limits from command line
+        MAX_PER_CLIENT = int(sys.argv[4])
+        MAX_TOTAL_CONNECTIONS = int(sys.argv[6])
+    except ValueError:
+        print("Error: Port and limits must be integers.")
+        sys.exit(1)
 
-    # Socket Creation: Create a TCP socket (`socket.socket(socket.AF_INET, socket.SOCK_STREAM)`).
+    # Socket Creation: Create a TCP socket
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-    # Bind and Listen: Bind the socket to the specified port and start listening for incoming connections.
+    # Bind and Listen
     server_socket.bind(("", port))
     server_socket.listen(5)
     print(f"HTTP Server running on http://localhost:{port}/")
 
-    # Infinite Loop: Start a `while True:` loop to handle connections sequentially (but)
-    # Adapted the while loop block to now handle the server concurrently by threading 
+    # 4. Infinite Loop: Handle connections concurrently
     try:
         while True:
             client_socket, client_addr = server_socket.accept()
-            print(f"Connected {client_addr}")
+            # client_addr is a tuple: (IP_ADDRESS, PORT)
+            
+            # --- RESOURCE CHECK AND INCREMENT LOGIC ---
+            with RESOURCE_LOCK:
+                client_id = client_addr # Use the (IP, Port) tuple as the unique identifier
+                client_count = client_connection_counts.get(client_id, 0)
 
-            client_thread = threading.Thread(target=handle_client, args=(client_socket,))
+                # System-wide limit
+                if active_connections >= MAX_TOTAL_CONNECTIONS:
+                    print(f"Connection REJECTED: System-wide limit ({MAX_TOTAL_CONNECTIONS}) reached.")
+                    client_socket.close()
+                    continue 
+
+                # Per-client limit
+                if client_count >= MAX_PER_CLIENT:
+                    print(f"Connection REJECTED: Client limit ({MAX_PER_CLIENT}) reached for {client_id}.")
+                    client_socket.close()
+                    continue
+
+                # --- IF ACCEPTED: INCREMENT COUNTERS ---
+                active_connections += 1
+                client_connection_counts[client_id] = client_count + 1
+                
+                print(f"Connection ACCEPTED from {client_id}. Total active: {active_connections}")
+            
+            # Spawn Thread (Uses the wrapper for automatic resource cleanup)
+            client_thread = threading.Thread(
+                target=handle_client_wrapper,
+                args=(client_socket, client_id)
+            )
+            client_thread.daemon = True
             client_thread.start()
 
     except KeyboardInterrupt:
