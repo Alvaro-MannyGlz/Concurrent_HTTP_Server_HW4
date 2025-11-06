@@ -8,7 +8,7 @@ This project will build on a previous project, a sequential Python HTTP server, 
 
 ### Execution
 
-1.  **Launch the Server:** Run the script specifying the port, maximum connections per client, and maximum total connections:
+**Launch the Server:** Run the script specifying the port, maximum connections per client, and maximum total connections:
 
     ```bash
     python http_server_conc.py -p <port> -maxclient <numconn> -maxtotal <numconn>
@@ -17,10 +17,6 @@ This project will build on a previous project, a sequential Python HTTP server, 
     ```bash
     python http_server_conc.py -p 20001 -maxclient 12 -maxtotal 60
     ```
-
-### 3. Add Resource Management Strategy 
-
-
 
 ## Resource Management and Concurrency
 
@@ -73,4 +69,3 @@ Prevention is enforced using thread-safe checks immediately after the connection
 Wasn't able to successfully test the testcases
 
 #### 4. Report the times and speedup for concurrent fetch of the URLs in testcases 1 and 2 with your http_server_conc. Are these numbers the same as above? Why or why not?
-Wasn't able to successfully test the testcases
