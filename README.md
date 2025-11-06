@@ -8,7 +8,7 @@ This project will build on a previous project, a sequential Python HTTP server, 
 
 ### Execution
 
-1.  **Launch the Server:** Run the script specifying the port, maximum connections per client, and maximum total connections:
+**Launch the Server:** Run the script specifying the port, maximum connections per client, and maximum total connections:
 
     ```bash
     python http_server_conc.py -p <port> -maxclient <numconn> -maxtotal <numconn>
@@ -17,10 +17,6 @@ This project will build on a previous project, a sequential Python HTTP server, 
     ```bash
     python http_server_conc.py -p 20001 -maxclient 12 -maxtotal 60
     ```
-
-### 3. Add Resource Management Strategy 
-
-
 
 ## Resource Management and Concurrency
 
